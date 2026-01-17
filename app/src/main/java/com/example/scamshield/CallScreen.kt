@@ -10,7 +10,7 @@ import com.example.scamshield.MainActivity
 class CallScreen : CallScreeningService() {
 
     override fun onScreenCall(callDetails: Call.Details) {
-//        Log.d("ScamShield", "onScreenCall fired: dir=${callDetails.callDirection}, handle=${callDetails.handle}")
+        Log.d("ScamShield", "onScreenCall fired: dir=${callDetails.callDirection}, handle=${callDetails.handle}")
 
         val phoneNumber = callDetails.handle.schemeSpecificPart
 
