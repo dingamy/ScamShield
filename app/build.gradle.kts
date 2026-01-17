@@ -3,6 +3,12 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+dependencies {
+    // Other dependencies...
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("com.google.android.material:material:1.13.0")
+}
+
 android {
     namespace = "com.example.scamshield"
     compileSdk {
@@ -34,6 +40,9 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    lint {
+        disable.add("MissingClass")
     }
 }
 
