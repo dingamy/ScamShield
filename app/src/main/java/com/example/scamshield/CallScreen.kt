@@ -1,12 +1,17 @@
+package com.example.scamshield
 import android.telecom.CallScreeningService
 import android.telecom.Call
 import android.content.Intent
 import android.provider.ContactsContract
 import android.net.Uri
+import android.util.Log
+import com.example.scamshield.MainActivity
 
 class CallScreen : CallScreeningService() {
 
     override fun onScreenCall(callDetails: Call.Details) {
+//        Log.d("ScamShield", "onScreenCall fired: dir=${callDetails.callDirection}, handle=${callDetails.handle}")
+
         val phoneNumber = callDetails.handle.schemeSpecificPart
 
         // 1. Check if the number is in the user's contact list
@@ -31,15 +36,26 @@ class CallScreen : CallScreeningService() {
     }
 
     private fun checkContact(phoneNumber: String): Boolean {
+        if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS)
+            != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            Log.d("ScamShield", "READ_CONTACTS not granted")
+            return false
+        }
+
         val uri = Uri.withAppendedPath(
             ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
             Uri.encode(phoneNumber)
         )
-        val projection = arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME)
-        val cursor = contentResolver.query(uri, projection, null, null, null)
+        contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)
+            ?.use { return it.count > 0 }
 
-        val exists = cursor?.use { it.count > 0 } ?: false
-        return exists
+        return false
+//        val projection = arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME)
+//        val cursor = contentResolver.query(uri, projection, null, null, null)
+//
+//        val exists = cursor?.use { it.count > 0 } ?: false
+//        return exists
     }
 
     private fun isLikelySpoofed(number: String): Boolean {
