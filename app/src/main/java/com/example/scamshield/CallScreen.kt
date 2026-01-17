@@ -3,21 +3,28 @@ import android.telecom.Call
 import android.content.Intent
 import android.provider.ContactsContract
 import android.net.Uri
+import android.telecom.TelecomManager
 
 class CallScreen : CallScreeningService() {
 
     override fun onScreenCall(callDetails: Call.Details) {
-        val phoneNumber = callDetails.handle.schemeSpecificPart
-
+        val phoneNumber = callDetails.handle?.schemeSpecificPart ?: "unknown"
         // 1. Check if the number is in the user's contact list
         val isContact = checkContact(phoneNumber)
+        val presentation = callDetails.handlePresentation
 
+        if (isContact){
+            when (presentation){
+                TelecomManager.PRESENTATION_UNKNOWN, TelecomManager.PRESENTATION_UNAVAILABLE, TelecomManager.PRESENTATION_RESTRICTED ->{
+                    triggerRedAlert(phoneNumber)
+                }
+            }
+        }
         // 2. Logic for Hackathon Demo:
         // If it's a "saved contact" but fails our (mock) STIR/SHAKEN check
-        if (isContact && isLikelySpoofed(phoneNumber)) {
-            triggerRedAlert(phoneNumber)
-        }
-
+//        if (isContact && isLikelySpoofed(phoneNumber)) {
+//
+//        }
         // 3. Tell the system to let the call through normally
         // We just want to provide our own UI overlay on top of it
         val response = CallResponse.Builder()
@@ -28,6 +35,10 @@ class CallScreen : CallScreeningService() {
             .build()
 
         respondToCall(callDetails, response)
+
+        // Get the STIR/SHAKEN verification status from the carrier
+        val verificationStatus = callDetails.callerNumberVerificationStatus
+
     }
 
     private fun checkContact(phoneNumber: String): Boolean {
