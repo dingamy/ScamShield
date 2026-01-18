@@ -3,11 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-dependencies {
-    // Other dependencies...
-    implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("com.google.android.material:material:1.13.0")
-}
+
 
 android {
     namespace = "com.example.scamshield"
@@ -23,6 +19,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters.add("arm64-v8a")
+            abiFilters.add("x86_64")
+        }
     }
 
     buildTypes {
@@ -41,8 +42,19 @@ android {
     buildFeatures {
         compose = true
     }
+
+    androidResources {
+        noCompress += "tflite"
+    }
+
     lint {
         disable.add("MissingClass")
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -62,4 +74,11 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // TensorFlow Lite Task Text for NLClassifier (Includes TFLite core transitively)
+    // implementation("org.tensorflow:tensorflow-lite-task-text:0.4.4")
+
+    // TensorFlow Lite core implementation (provides Interpreter with GPU support)
+    implementation("org.tensorflow:tensorflow-lite:2.16.1")
+    implementation("org.tensorflow:tensorflow-lite-api:2.16.1")
 }
