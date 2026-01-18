@@ -81,6 +81,12 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <activity
+            android:name=".ScamDetectedActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.ScamShield" />
     </application>
 
 </manifest>

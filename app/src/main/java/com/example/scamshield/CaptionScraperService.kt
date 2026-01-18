@@ -15,6 +15,7 @@ import androidx.core.app.NotificationCompat
 import android.widget.RemoteViews
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
+import kotlin.apply
 import kotlin.or
 import kotlin.text.compareTo
 
@@ -51,6 +52,12 @@ class CaptionScraperService : AccessibilityService() {
                 scamNotificationShown = false
                 val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 notificationManager.cancel(NOTIFICATION_ID)
+
+                val intent = Intent(this, ScamDetectedActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+
+
                 scamNotificationShown = false
 
                 Log.d("ScamShield", "Call ended - notification dismissed and flag reset")
@@ -121,8 +128,16 @@ class CaptionScraperService : AccessibilityService() {
         if (true && !scamNotificationShown) {
             Log.w("ScamShield", "SCAM DETECTED in text: $text")
             scamNotificationShown = true
+            incrementScamCounter()
             showPersistentScamNotification(text)
         }
+    }
+    private fun incrementScamCounter() {
+        val prefs = getSharedPreferences("scam_shield_prefs", Context.MODE_PRIVATE)
+        val currentCount = prefs.getInt("scam_count", 0)
+        prefs.edit().putInt("scam_count", currentCount + 1).apply()
+
+        Log.d("ScamShield", "Total scams blocked: ${currentCount + 1}")
     }
 
     private fun createNotificationChannel() {
