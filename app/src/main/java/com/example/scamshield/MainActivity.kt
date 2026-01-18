@@ -1,11 +1,14 @@
 package com.example.scamshield
 import android.app.role.RoleManager
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -33,6 +36,7 @@ class MainActivity : AppCompatActivity() {
         Log.d("ScamShield", "hellohello")
 
         super.onCreate(savedInstanceState)
+        checkOverlayPermission()
         setContentView(R.layout.activity_main)
 
 //         1. Check if we were opened because of a spoof detection
@@ -41,7 +45,7 @@ class MainActivity : AppCompatActivity() {
         if (isWarning) {
             setupWarningUI()
         } else {
-        setupOnboardingUI()
+            setupOnboardingUI()
         }
     }
 
@@ -76,7 +80,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-    val roleManager = getSystemService(ROLE_SERVICE) as RoleManager
+        val roleManager = getSystemService(ROLE_SERVICE) as RoleManager
 
         if (roleManager.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING) &&
             !roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
@@ -86,4 +90,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+                startActivityForResult(intent, 1001)
+            }
+        }
+    }
 }

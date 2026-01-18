@@ -4,6 +4,8 @@ import android.telecom.Call
 import android.content.Intent
 import android.provider.ContactsContract
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.telecom.TelecomManager
 import android.util.Log
 
@@ -13,24 +15,12 @@ class CallScreen : CallScreeningService() {
         Log.d("ScamShield", "onScreenCall fired: dir=${callDetails.callDirection}, handle=${callDetails.handle}")
 
         val phoneNumber = callDetails.handle?.schemeSpecificPart ?: "unknown"
-        // 1. Check if the number is in the user's contact list
         val isContact = checkContact(phoneNumber)
-        val presentation = callDetails.handlePresentation
 
-        if (isContact){
-            when (presentation){
-                TelecomManager.PRESENTATION_UNKNOWN, TelecomManager.PRESENTATION_UNAVAILABLE, TelecomManager.PRESENTATION_RESTRICTED ->{
-                    triggerRedAlert(phoneNumber)
-                }
-            }
+        if (isContact && isLikelySpoofed(phoneNumber)) {
+            triggerRedAlert(phoneNumber)
         }
-        // 2. Logic for Hackathon Demo:
-        // If it's a "saved contact" but fails our (mock) STIR/SHAKEN check
-//        if (isContact && isLikelySpoofed(phoneNumber)) {
-//
-//        }
-        // 3. Tell the system to let the call through normally
-        // We just want to provide our own UI overlay on top of it
+
         val response = CallResponse.Builder()
             .setDisallowCall(false)
             .setRejectCall(false)
@@ -39,10 +29,6 @@ class CallScreen : CallScreeningService() {
             .build()
 
         respondToCall(callDetails, response)
-
-        // Get the STIR/SHAKEN verification status from the carrier
-        val verificationStatus = callDetails.callerNumberVerificationStatus
-
     }
 
     private fun checkContact(phoneNumber: String): Boolean {
@@ -61,27 +47,23 @@ class CallScreen : CallScreeningService() {
             ?.use { return it.count > 0 }
 
         return false
-//        val projection = arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME)
-//        val cursor = contentResolver.query(uri, projection, null, null, null)
-//
-//        val exists = cursor?.use { it.count > 0 } ?: false
-//        return exists
     }
 
     private fun isLikelySpoofed(number: String): Boolean {
-        // HACKATHON SHORTCUT:
-        // In a real app, you'd check a STIR/SHAKEN API here.
-        // For the demo, return 'true' if the number matches your teammate's phone.
+        // For the demo, we assume any call from a saved contact is potentially spoofed
+        // to trigger the warning UI.
         return true
     }
 
     private fun triggerRedAlert(number: String) {
-        // This launches your warning UI
-        val intent = Intent(this, MainActivity::class.java).apply {
+        val intent = Intent(this, WarningActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            putExtra("SPOOF_WARNING", true)
             putExtra("CALLER_NUMBER", number)
         }
-        startActivity(intent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+            startActivity(intent)
+        } else {
+            Log.e("ScamShield", "Overlay permission not granted, cannot show warning UI.")
+        }
     }
 }
