@@ -7,7 +7,7 @@ import android.provider.Settings
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import android.util.Log
-import android.telecom.TelecomManager
+import android.telecom.Connection
 
 
 class
@@ -22,10 +22,18 @@ CallScreening : CallScreeningService() {
 
         val phoneNumber = callDetails.handle?.schemeSpecificPart ?: "unknown"
         val isContact = checkContact(phoneNumber)
-        val presentation = callDetails.handlePresentation
 
-        if (isContact && isLikelySpoofed(presentation)) {
+        if (isContact && isLikelySpoofed(callDetails.callerNumberVerificationStatus)) {
+            // Set flag to enable caption scam detection for this call
+            val prefs = getSharedPreferences("scam_shield_prefs", MODE_PRIVATE)
+            prefs.edit().putBoolean("red_alert_active", true).apply()
+            Log.d("ScamShield", "Red alert triggered - caption scam detection enabled")
+
             triggerRedAlert(phoneNumber)
+        } else {
+            val prefs = getSharedPreferences("scam_shield_prefs", MODE_PRIVATE)
+            prefs.edit().putBoolean("red_alert_active", false).apply()
+            Log.d("ScamShield", "Normal call - caption scam detection disabled")
         }
 
         val response =
@@ -52,22 +60,12 @@ CallScreening : CallScreeningService() {
         return false
     }
 
-    private fun isLikelySpoofed(presentationVal : Int): Boolean {
+    private fun isLikelySpoofed(verificationStatus : Int): Boolean {
         // For the demo, we assume any call from a saved contact is potentially spoofed
         // to trigger the warning UI.
-//        when (presentationVal) {
-//            TelecomManager.PRESENTATION_UNAVAILABLE -> {
-//                // Carrier has it but won't tell us
-//                return true
-//            }
-//            TelecomManager.PRESENTATION_UNKNOWN -> {
-//                // Carrier genuinely doesn't know
-//                return true
-//            }
-//        }
-//        return false
-        Log.d("ScamShield", "Checking spoof status for $presentationVal")
-        return true
+        Log.d("ScamShield", "Caller number verification status: $verificationStatus")
+
+        return verificationStatus != Connection.VERIFICATION_STATUS_PASSED
     }
 
     private fun triggerRedAlert(number: String) {

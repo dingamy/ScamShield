@@ -306,3 +306,4 @@ fun checkAccessibility(context: Context): Boolean {
     }
     return false
 }
+

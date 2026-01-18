@@ -111,7 +111,7 @@ object ScamDetector {
                 val scamProbability = if (sumExp > 0) (exp(scamLogit.toDouble()) / sumExp).toFloat() else 0f
                 Log.d(TAG, "Computed scam probability: $scamProbability")
 
-                if (scamProbability > 0.97f) {
+                if (scamProbability > 0.96f) {
                      Log.d(TAG, "SCAM detected by ML model (probability: $scamProbability)")
                      return true
                 }

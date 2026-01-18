@@ -85,14 +85,20 @@ class CaptionScraperService : AccessibilityService(), SpellCheckerSession.SpellC
 
         val callActive = isCallActive()
 
-        // handle call state changes to reset transcript
+        // Handle call start: reset transcript
         if (callActive && !wasCallActive) {
             Log.d("ScamShield", "Call started. Resetting transcript.")
             transcript.clear()
         }
-        wasCallActive = callActive
 
-        if (!callActive) {
+        // Handle call end: cleanup and reset flags
+        // Check BEFORE updating wasCallActive
+        if (!callActive && wasCallActive) {
+            // Reset red alert flag when call ends
+            val prefs = getSharedPreferences("scam_shield_prefs", MODE_PRIVATE)
+            prefs.edit().putBoolean("red_alert_active", false).apply()
+            Log.d("ScamShield", "Call ended - red alert flag reset")
+
             if (scamNotificationShown) {
                 // Call ended, stop vibration but KEEP notification
                 VibrationManager.stopVibration()
@@ -106,14 +112,20 @@ class CaptionScraperService : AccessibilityService(), SpellCheckerSession.SpellC
 
                 Log.d("ScamShield", "Call ended - notification dismissed and flag reset")
             }
+            wasCallActive = callActive  // Update state after handling call end
+            return
+        }
+
+        // Update state for next event
+        wasCallActive = callActive
+
+        // Only process caption events when call is active
+        if (!callActive) {
             return
         }
 
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
             event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
-
-            // Log package to help debug where text comes from (e.g., com.google.android.as)
-            // Log.d("ScamShield", "Event from: ${event.packageName}")
 
             val source = event.source
             if (source != null) {
@@ -216,6 +228,15 @@ class CaptionScraperService : AccessibilityService(), SpellCheckerSession.SpellC
 
     private fun checkForScam(text: String) {
         if (scamNotificationShown) return
+
+        // Only perform scam detection if red alert was triggered
+        val prefs = getSharedPreferences("scam_shield_prefs", MODE_PRIVATE)
+        val redAlertActive = prefs.getBoolean("red_alert_active", false)
+
+        if (!redAlertActive) {
+            Log.d("ScamShield", "Skipping scam detection - red alert not active")
+            return
+        }
 
         Log.d("ScamShield", "Checking text: $text")
         if (text.length < 50) return // Too short to be meaningful
