@@ -1,62 +1,47 @@
 package com.example.scamshield
-import android.telecom.CallScreeningService
-import android.telecom.Call
+
 import android.content.Intent
-import android.provider.ContactsContract
 import android.net.Uri
-import android.os.Build
+import android.provider.ContactsContract
 import android.provider.Settings
-import android.telecom.TelecomManager
+import android.telecom.Call
+import android.telecom.CallScreeningService
 import android.util.Log
-import android.app.NotificationManager
-import android.content.Context
+
 class CallScreen : CallScreeningService() {
 
     override fun onScreenCall(callDetails: Call.Details) {
-        Log.d("ScamShield", "onScreenCall fired: dir=${callDetails.callDirection}, handle=${callDetails.handle}")
+        Log.d(
+            "ScamShield",
+            "onScreenCall fired: dir=${callDetails.callDirection}, handle=${callDetails.handle}"
+        )
 
         val phoneNumber = callDetails.handle?.schemeSpecificPart ?: "unknown"
         val isContact = checkContact(phoneNumber)
 
-        val presentation = callDetails.handlePresentation
-
-        // commented out for testing
-//        if (isContact) {
-//            when (presentation) {
-//                TelecomManager.PRESENTATION_UNKNOWN, TelecomManager.PRESENTATION_UNAVAILABLE, TelecomManager.PRESENTATION_RESTRICTED -> {
-//                    triggerRedAlert(phoneNumber)
-//                }
-//            }
-//
-//        }
         if (isContact && isLikelySpoofed(phoneNumber)) {
             triggerRedAlert(phoneNumber)
         }
 
-        val response = CallResponse.Builder()
-            .setDisallowCall(false)
-            .setRejectCall(false)
-            .setSkipCallLog(false)
-            .setSkipNotification(false)
-            .build()
+        val response =
+            CallResponse.Builder().setDisallowCall(false).setRejectCall(false).setSkipCallLog(false)
+                .setSkipNotification(false).build()
 
         respondToCall(callDetails, response)
     }
 
     private fun checkContact(phoneNumber: String): Boolean {
-        if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS)
-            != android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
+        if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             Log.d("ScamShield", "READ_CONTACTS not granted")
             return false
         }
 
         val uri = Uri.withAppendedPath(
-            ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
-            Uri.encode(phoneNumber)
+            ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(phoneNumber)
         )
-        contentResolver.query(uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)
-            ?.use { return it.count > 0 }
+        contentResolver.query(
+            uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null
+        )?.use { return it.count > 0 }
 
         return false
     }
@@ -64,7 +49,7 @@ class CallScreen : CallScreeningService() {
     private fun isLikelySpoofed(number: String): Boolean {
         // For the demo, we assume any call from a saved contact is potentially spoofed
         // to trigger the warning UI.
-
+        Log.d("ScamShield", "Checking spoof status for $number")
         return true
     }
 
@@ -73,7 +58,7 @@ class CallScreen : CallScreeningService() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             putExtra("CALLER_NUMBER", number)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+        if (Settings.canDrawOverlays(this)) {
             startActivity(intent)
         } else {
             Log.e("ScamShield", "Overlay permission not granted, cannot show warning UI.")

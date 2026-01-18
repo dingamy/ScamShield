@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">ScamShield</string>
+    <string name="system_active">System Active &amp; Protecting You</string>
+    <string name="warning_spoof">Warning: Potential spoofed call from\n%1$s</string>
 </resources>

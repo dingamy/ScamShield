@@ -1,6 +1,5 @@
 package com.example.scamshield
 
-import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -13,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 
@@ -20,9 +20,7 @@ class WarningActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Set overlay window type for Android 8.0+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            window.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-        }
+        window.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
         val callerNumber = intent.getStringExtra("CALLER_NUMBER") ?: "Unknown"
         setContent {
             Column(
@@ -33,7 +31,7 @@ class WarningActivity : ComponentActivity() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Warning: Potential spoofed call from\n$callerNumber",
+                    text = stringResource(R.string.warning_spoof, callerNumber),
                     color = Color.White,
                     fontSize = 24.sp,
                     textAlign = TextAlign.Center
