@@ -10,7 +10,9 @@ import android.util.Log
 import android.telecom.TelecomManager
 
 
-class CallScreening : CallScreeningService() {
+class
+
+CallScreening : CallScreeningService() {
 
     override fun onScreenCall(callDetails: Call.Details) {
         Log.d(
@@ -69,9 +71,13 @@ class CallScreening : CallScreeningService() {
     }
 
     private fun triggerRedAlert(number: String) {
+        // Get caller name from contacts
+        val callerName = getCallerName(number)
+
         val intent = Intent(this, WarningActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             putExtra("CALLER_NUMBER", number)
+            putExtra("CALLER_NAME", callerName) // Add caller name
         }
         if (Settings.canDrawOverlays(this)) {
             startActivity(intent)
@@ -79,4 +85,33 @@ class CallScreening : CallScreeningService() {
             Log.e("ScamShield", "Overlay permission not granted, cannot show warning UI.")
         }
     }
+
+    private fun getCallerName(phoneNumber: String): String {
+        if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            return "Unknown Caller"
+        }
+
+        val uri = Uri.withAppendedPath(
+            ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+            Uri.encode(phoneNumber)
+        )
+
+        contentResolver.query(
+            uri,
+            arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME)
+                if (nameIndex >= 0) {
+                    return cursor.getString(nameIndex) ?: "Unknown Caller"
+                }
+            }
+        }
+
+        return "Unknown Caller"
+    }
+
 }
