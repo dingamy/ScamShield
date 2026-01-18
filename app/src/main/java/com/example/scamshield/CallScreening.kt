@@ -7,6 +7,8 @@ import android.provider.Settings
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import android.util.Log
+import android.telecom.TelecomManager
+
 
 class CallScreening : CallScreeningService() {
 
@@ -18,14 +20,15 @@ class CallScreening : CallScreeningService() {
 
         val phoneNumber = callDetails.handle?.schemeSpecificPart ?: "unknown"
         val isContact = checkContact(phoneNumber)
+        val presentation = callDetails.handlePresentation
 
-        if (isContact && isLikelySpoofed(phoneNumber)) {
+        if (isContact && isLikelySpoofed(presentation)) {
             triggerRedAlert(phoneNumber)
         }
 
         val response =
             CallResponse.Builder().setDisallowCall(false).setRejectCall(false).setSkipCallLog(false)
-                .setSkipNotification(false).build()
+                .setSkipNotification(false).build         ()
 
         respondToCall(callDetails, response)
     }
@@ -47,10 +50,21 @@ class CallScreening : CallScreeningService() {
         return false
     }
 
-    private fun isLikelySpoofed(number: String): Boolean {
+    private fun isLikelySpoofed(presentationVal : Int): Boolean {
         // For the demo, we assume any call from a saved contact is potentially spoofed
         // to trigger the warning UI.
-        Log.d("ScamShield", "Checking spoof status for $number")
+//        when (presentationVal) {
+//            TelecomManager.PRESENTATION_UNAVAILABLE -> {
+//                // Carrier has it but won't tell us
+//                return true
+//            }
+//            TelecomManager.PRESENTATION_UNKNOWN -> {
+//                // Carrier genuinely doesn't know
+//                return true
+//            }
+//        }
+//        return false
+        Log.d("ScamShield", "Checking spoof status for $presentationVal")
         return true
     }
 
