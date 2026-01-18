@@ -5,7 +5,6 @@ import android.content.Intent
 import android.provider.ContactsContract
 import android.net.Uri
 import android.util.Log
-import com.example.scamshield.MainActivity
 
 class CallScreen : CallScreeningService() {
 
@@ -66,8 +65,9 @@ class CallScreen : CallScreeningService() {
     }
 
     private fun triggerRedAlert(number: String) {
+        Log.d("ScamShield", "Triggering red alert for $number, launching MainActivity for warning")
         // This launches your warning UI
-        val intent = Intent(this, MainActivity::class.java).apply {
+        val intent = Intent(this, MainActivity_REAL::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             putExtra("SPOOF_WARNING", true)
             putExtra("CALLER_NUMBER", number)

@@ -1,89 +1,38 @@
 package com.example.scamshield
-import android.app.role.RoleManager
+
+import android.Manifest
 import android.os.Bundle
-import android.view.View
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
-import android.graphics.Color
-import android.os.Build
-import android.util.Log
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
-import com.example.scamshield.R
+import androidx.appcompat.app.AppCompatActivity
+import android.util.Log
 
-class MainActivity : AppCompatActivity() {
+class MicTestActivity : AppCompatActivity() {
 
-    private val REQUEST_ID = 101
+    private lateinit var statusText: TextView
 
-    private val requestRoleLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
-                Log.d("ScamShield", "Call screening role granted!")
+    private val micPermLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                startLiveTranscription()
             } else {
-                Log.d("ScamShield", "Call screening role NOT granted.")
+                Toast.makeText(this, "Microphone permission denied", Toast.LENGTH_LONG).show()
             }
         }
 
-    private val contactsPermLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            Log.d("ScamShield", "READ_CONTACTS granted? $granted")
-        }
-
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.d("ScamShield", "hellohello")
-
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_main) // use your existing layout with a TextView
+        statusText = findViewById(R.id.statusText)
 
-//         1. Check if we were opened because of a spoof detection
-        val isWarning = intent.getBooleanExtra("SPOOF_WARNING", false)
-
-        if (isWarning) {
-            setupWarningUI()
-        } else {
-        setupOnboardingUI()
-        }
+        // Ask for mic permission
+        micPermLauncher.launch(Manifest.permission.RECORD_AUDIO)
     }
 
-    private fun setupOnboardingUI() {
-        val statusText = findViewById<TextView>(R.id.statusText)
-        statusText.text = "ScamShield running"
-        statusText.text = "System Active & Protecting You"
-
-        // Trigger the system dialog to become the Call Screener
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            contactsPermLauncher.launch(android.Manifest.permission.READ_CONTACTS)
-            requestCallScreeningRole_QPlus()
-        } else {
-            statusText.text = "Requires Android 10+ for call screening"
-        }
+    private fun startLiveTranscription() {
+        statusText.text = "Listening..."
+        val transcriptionHelper = TranscriptionHelper(this)
+        transcriptionHelper.startListening()
     }
-
-    private fun setupWarningUI() {
-        // Change the background to red and show the alert
-        val rootLayout = findViewById<View>(R.id.mainLayout)
-        val alertText = findViewById<TextView>(R.id.statusText)
-
-        rootLayout.setBackgroundColor(Color.RED)
-        alertText.text = "WARNING: SCAM DETECTED!\nThis caller is NOT who they claim to be."
-        alertText.setTextColor(Color.WHITE)
-        alertText.textSize = 32f
-    }
-
-    private fun requestCallScreeningRole_QPlus() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            Log.d("ScamShield", "Call screening requires Android 10+")
-            return
-        }
-
-    val roleManager = getSystemService(ROLE_SERVICE) as RoleManager
-
-        if (roleManager.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING) &&
-            !roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
-        ) {
-            val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
-            requestRoleLauncher.launch(intent)
-        }
-    }
-
 }
