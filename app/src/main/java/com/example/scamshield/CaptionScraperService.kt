@@ -13,7 +13,8 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.core.app.NotificationCompat
 import android.widget.RemoteViews
-
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
 import kotlin.or
 import kotlin.text.compareTo
 
@@ -23,10 +24,20 @@ class CaptionScraperService : AccessibilityService() {
     private val NOTIFICATION_ID = 9999
     private var scamNotificationShown = false
 
+    private val resetReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            scamNotificationShown = false
+            Log.d("ScamShield", "Scam notification flag reset - ready for next call")
+        }
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         Log.d("ScamShield", "CaptionScraperService connected")
         createNotificationChannel()
+        val filter = IntentFilter("com.example.scamshield.RESET_SCAM_FLAG")
+        registerReceiver(resetReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -37,6 +48,13 @@ class CaptionScraperService : AccessibilityService() {
             if (scamNotificationShown) {
                 // Call ended, stop vibration but KEEP notification
                 VibrationManager.stopVibration()
+                scamNotificationShown = false
+                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                notificationManager.cancel(NOTIFICATION_ID)
+                scamNotificationShown = false
+
+                Log.d("ScamShield", "Call ended - notification dismissed and flag reset")
+
                 // Don't cancel the notification here - let user dismiss it
             }
             return  // Don't reset scamNotificationShown flag
@@ -204,10 +222,10 @@ class CaptionScraperService : AccessibilityService() {
 
 
 
-
     override fun onDestroy() {
         super.onDestroy()
         VibrationManager.stopVibration()
+        unregisterReceiver(resetReceiver)  // Don't forget to unregister
     }
 
     override fun onInterrupt() {
