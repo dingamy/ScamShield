@@ -8,7 +8,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.exp
 import kotlin.math.min
-
+// https://drive.google.com/file/d/1HjiZbozdbLauIr3uz1np3Z46d7HJcJa6/view?usp=sharing
 object ScamDetector {
     private const val TAG = "ScamDetector"
     private const val MODEL_FILE = "distilbert_scam_detector.tflite"
