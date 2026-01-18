@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +35,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.ui.text.font.FontWeight
+
 
 import android.view.accessibility.CaptioningManager
 
@@ -58,17 +65,17 @@ class WarningActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Set overlay window type for Android 8.0+
         window.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
         val callerNumber = intent.getStringExtra("CALLER_NUMBER") ?: "Unknown"
+        val callerName = intent.getStringExtra("CALLER_NAME")
 
-        // Register receiver programmatically
         val filter = IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
         registerReceiver(callStateReceiver, filter)
 
         setContent {
             WarningScreen(
                 callerNumber = callerNumber,
+                callerName = callerName,
                 isServiceEnabled = isServiceEnabled,
                 isCaptionsEnabled = isCaptionsEnabled,
                 onEnableServiceClick = {
@@ -77,13 +84,14 @@ class WarningActivity : ComponentActivity() {
                     startActivity(intent)
                 },
                 onCaptionSettingsClick = {
-                     val intent = Intent(Settings.ACTION_CAPTIONING_SETTINGS)
-                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                     startActivity(intent)
+                    val intent = Intent(Settings.ACTION_CAPTIONING_SETTINGS)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    startActivity(intent)
                 }
             )
         }
     }
+
 
     override fun onResume() {
         super.onResume()
@@ -121,51 +129,286 @@ class WarningActivity : ComponentActivity() {
 @Composable
 fun WarningScreen(
     callerNumber: String,
+    callerName: String?,
     isServiceEnabled: Boolean,
     isCaptionsEnabled: Boolean,
     onEnableServiceClick: () -> Unit,
     onCaptionSettingsClick: () -> Unit
 ) {
-    val backgroundColor = if (isServiceEnabled) Color(0xFF2E7D32) else Color.Red // Green if enabled, Red if warning
+    if (isServiceEnabled) {
+        MonitoringScreen(callerNumber, callerName, isCaptionsEnabled, onCaptionSettingsClick)
+    } else {
+        AlertScreen(callerNumber, callerName, onEnableServiceClick)
+    }
+}
 
-    Column(
+
+
+@Composable
+private fun MonitoringScreen(
+    callerNumber: String,
+    callerName: String?,
+    isCaptionsEnabled: Boolean,
+    onCaptionSettingsClick: () -> Unit
+) {
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(Color(0xFF1B5E20)),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = if (isServiceEnabled) stringResource(R.string.scam_shield_monitoring)
-                   else stringResource(R.string.warning_spoof, callerNumber),
-            color = Color.White,
-            fontSize = 24.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        if (!isServiceEnabled) {
-            Button(
-                onClick = onEnableServiceClick,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Red)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = stringResource(R.string.enable_scam_shield))
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .background(
+                            color = Color(0xFF4CAF50).copy(alpha = 0.2f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "🛡️", fontSize = 64.sp)
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "ScamShield Active",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2E7D32),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Detecting for fraud or scam",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF666666),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (callerName != null) {
+                            Text(
+                                text = callerName,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF212121),
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+                        Text(
+                            text = callerNumber,
+                            fontSize = if (callerName != null) 16.sp else 22.sp,
+                            fontWeight = if (callerName != null) FontWeight.Normal else FontWeight.Bold,
+                            color = if (callerName != null) Color(0xFF757575) else Color(0xFF212121),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                if (!isCaptionsEnabled) {
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "💡 Tip",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFE65100)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Enable Live Caption for real-time scam detection",
+                                fontSize = 14.sp,
+                                color = Color(0xFF6D4C41),
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = onCaptionSettingsClick,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFFF9800),
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Enable Live Caption")
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "✓ ",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50)
+                    )
+                    Text(
+                        text = "Trust what rings",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF4CAF50)
+                    )
+                }
             }
-        } else if (!isCaptionsEnabled) {
-             Text(
-                text = stringResource(R.string.scam_shield_live_caption_hint),
-                color = Color.White,
-                fontSize = 18.sp,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onCaptionSettingsClick,
-                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF2E7D32))
+        }
+    }
+}
+
+@Composable
+private fun AlertScreen(
+    callerNumber: String,
+    callerName: String?,
+    onEnableServiceClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFC62828)),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Open Caption Settings")
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .background(
+                            color = Color(0xFFEF5350).copy(alpha = 0.2f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "⚠️", fontSize = 64.sp)
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "Potential Scam Call",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFC62828),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (callerName != null) {
+                            Text(
+                                text = callerName,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF212121),
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+                        Text(
+                            text = callerNumber,
+                            fontSize = if (callerName != null) 16.sp else 22.sp,
+                            fontWeight = if (callerName != null) FontWeight.Normal else FontWeight.Bold,
+                            color = if (callerName != null) Color(0xFF757575) else Color(0xFF212121),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "Enable protection to detect fraudulent calls",
+                    fontSize = 16.sp,
+                    color = Color(0xFF666666),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onEnableServiceClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFC62828),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                ) {
+                    Text(
+                        text = "Enable ScamShield",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
             }
         }
     }

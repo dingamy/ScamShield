@@ -81,6 +81,16 @@ fun ScamDetectedScreen(onDismiss: () -> Unit) {
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "💡 Tip: If you know this person, try calling them back to verify it wasn't a scam.",
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.primary
+        )
+
         Spacer(modifier = Modifier.height(40.dp))
 
         Button(
