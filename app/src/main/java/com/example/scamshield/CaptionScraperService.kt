@@ -1,7 +1,14 @@
 package com.example.scamshield
 
 import android.accessibilityservice.AccessibilityService
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.telephony.TelephonyManager
@@ -13,8 +20,12 @@ import android.view.textservice.SpellCheckerSession
 import android.view.textservice.SuggestionsInfo
 import android.view.textservice.TextInfo
 import android.view.textservice.TextServicesManager
+import android.widget.RemoteViews
 import android.widget.Toast
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.apply
 
 class CaptionScraperService : AccessibilityService(), SpellCheckerSession.SpellCheckerSessionListener {
 
@@ -44,40 +55,65 @@ class CaptionScraperService : AccessibilityService(), SpellCheckerSession.SpellC
         "ing", "e p" // Specific noise fragments
     )
 
+    private val CHANNEL_ID = "scam_alert_channel"
+    private val NOTIFICATION_ID = 9999
+    private var scamNotificationShown = false
+
+    private val resetReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            scamNotificationShown = false
+            Log.d("ScamShield", "Scam notification flag reset - ready for next call")
+        }
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         Log.d("ScamShield", "CaptionScraperService connected")
 
         ScamDetector.init(this)
 
-        val tsm = getSystemService(Context.TEXT_SERVICES_MANAGER_SERVICE) as TextServicesManager
-        spellCheckerSession = tsm.newSpellCheckerSession(null, null, this, true)
+        createNotificationChannel()
+        val filter = IntentFilter("com.example.scamshield.RESET_SCAM_FLAG")
+        ContextCompat.registerReceiver(this, resetReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
-        Handler(Looper.getMainLooper()).post {
-             Toast.makeText(this, "ScamShield Caption Scraper Active", Toast.LENGTH_SHORT).show()
-        }
+        val tsm = getSystemService(TEXT_SERVICES_MANAGER_SERVICE) as TextServicesManager
+        spellCheckerSession = tsm.newSpellCheckerSession(null, null, this, true)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
 
-        // handle call state changes to reset transcript
         val callActive = isCallActive()
+
+        // handle call state changes to reset transcript
         if (callActive && !wasCallActive) {
             Log.d("ScamShield", "Call started. Resetting transcript.")
             transcript.clear()
         }
         wasCallActive = callActive
 
-        // optimize: don't process if no call is active
-        if (!callActive) return
+        if (!callActive) {
+            if (scamNotificationShown) {
+                // Call ended, stop vibration but KEEP notification
+                VibrationManager.stopVibration()
+                scamNotificationShown = false
+                val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                notificationManager.cancel(NOTIFICATION_ID)
 
-        // We listen primarily for content changes or text selection
+                val intent = Intent(this, ScamDetectedActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+
+                Log.d("ScamShield", "Call ended - notification dismissed and flag reset")
+            }
+            return
+        }
+
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
             event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
 
             // Log package to help debug where text comes from (e.g., com.google.android.as)
-//             Log.d("ScamShield", "Event from: ${event.packageName}")
+            // Log.d("ScamShield", "Event from: ${event.packageName}")
 
             val source = event.source
             if (source != null) {
@@ -87,9 +123,7 @@ class CaptionScraperService : AccessibilityService(), SpellCheckerSession.SpellC
                 if (fullText.isNotBlank()) {
                     processTranscript(fullText)
                 }
-                // source.recycle() handled by system usually for the root of event, but children need recycle.
             } else {
-                 // Fallback to event text
                 if (event.text.isNotEmpty()) {
                     val text = event.text.joinToString(" ")
                     processTranscript(text)
@@ -154,11 +188,9 @@ class CaptionScraperService : AccessibilityService(), SpellCheckerSession.SpellC
         }
     }
 
-
-
     private fun isCallActive(): Boolean {
         return try {
-            val tm = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            val tm = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
             tm.callState == TelephonyManager.CALL_STATE_OFFHOOK
         } catch (e: Exception) {
             false
@@ -185,12 +217,97 @@ class CaptionScraperService : AccessibilityService(), SpellCheckerSession.SpellC
     private fun checkForScam(text: String) {
         Log.d("ScamShield", "Checking text: $text")
         if (text.length < 50) return // Too short to be meaningful
+
         if (ScamDetector.analyze(text)) {
-             Log.w("ScamShield", "SCAM DETECTED in text: $text")
-             // Show Toast on Main Thread
+             if (!scamNotificationShown) {
+                 Log.w("ScamShield", "SCAM DETECTED in text: $text")
+                 scamNotificationShown = true
+                 incrementScamCounter()
+                 showPersistentScamNotification(text)
+             }
+
              Handler(Looper.getMainLooper()).post {
                  Toast.makeText(this, "WARNING: SCAM LIKELY DETECTED: $text", Toast.LENGTH_LONG).show()
              }
+        }
+    }
+
+    private fun incrementScamCounter() {
+        val prefs = getSharedPreferences("scam_shield_prefs", MODE_PRIVATE)
+        val currentCount = prefs.getInt("scam_count", 0)
+        prefs.edit().putInt("scam_count", currentCount + 1).apply()
+
+        Log.d("ScamShield", "Total scams blocked: ${currentCount + 1}")
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Scam Alert",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Alerts for potential scam calls"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 500, 200, 500, 200, 500)
+                setBypassDnd(true)
+                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+                setShowBadge(true)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    setAllowBubbles(false)
+                }
+            }
+
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun showPersistentScamNotification(text: String) {
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+        val dismissIntent = Intent(this, ScamAcknowledgeReceiver::class.java)
+        val dismissPendingIntent = PendingIntent.getBroadcast(
+            this, 0, dismissIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Create a full-screen intent to keep notification persistent
+        val fullScreenIntent = Intent(this, WarningActivity::class.java)
+        val fullScreenPendingIntent = PendingIntent.getActivity(
+            this, 0, fullScreenIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val customView = RemoteViews(packageName, R.layout.notification_scam_alert)
+        customView.setTextViewText(R.id.notification_text, "⚠️ Likely Scam")
+        customView.setOnClickPendingIntent(R.id.notification_button, dismissPendingIntent)
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setCustomContentView(customView)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setFullScreenIntent(fullScreenPendingIntent, true)
+            .build()
+
+        notification.flags = android.app.Notification.FLAG_NO_CLEAR
+
+        notificationManager.notify(NOTIFICATION_ID, notification)
+        VibrationManager.startContinuousVibration(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        VibrationManager.stopVibration()
+        try {
+            unregisterReceiver(resetReceiver)
+        } catch (e: Exception) {
+            // Receiver might not be registered if service crashes early or other issues
         }
     }
 

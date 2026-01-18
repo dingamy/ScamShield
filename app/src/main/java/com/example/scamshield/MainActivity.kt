@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,12 +52,12 @@ class MainActivity : ComponentActivity() {
 
     private val permissionsLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-             // refresh UI state on resume
+            // refresh UI state on resume
         }
 
     private val overlayPermLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-             // refresh UI state on resume
+            // refresh UI state on resume
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -125,19 +126,17 @@ fun OnboardingScreen(
     var hasRuntimePerms by remember { mutableStateOf(checkRuntimePerms(context)) }
     var hasOverlay by remember { mutableStateOf(checkOverlay(context)) }
     var hasAccessibility by remember { mutableStateOf(checkAccessibility(context)) }
-
-    // Re-check state when the composable is recomposed or resumed (you might need a LifecycleEventObserver for strict onResume updates, but this is a simple interactive UI)
-    // For simplicity in this demo, buttons will re-trigger checks or the user will click them.
-    // Ideally, we observe Lifecycle.EVENT_ON_RESUME.
+    var scamCount by remember { mutableStateOf(ScamCounter.getScamCount(context)) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
-    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+    DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 hasRole = checkRole(context)
                 hasRuntimePerms = checkRuntimePerms(context)
                 hasOverlay = checkOverlay(context)
                 hasAccessibility = checkAccessibility(context)
+                scamCount = ScamCounter.getScamCount(context)
             }
         }
         val lifecycle = lifecycleOwner.lifecycle
@@ -156,17 +155,35 @@ fun OnboardingScreen(
     ) {
         Spacer(modifier = Modifier.height(40.dp))
         Text(
-            text = "ScamShield Setup",
-            fontSize = 28.sp,
+            text = "🛡️ ScamShield",
+            fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Please grant the following permissions to enable protection.",
-            fontSize = 16.sp,
-            textAlign = TextAlign.Center
-        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Scam Counter Display
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Protected you",
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                text = "$scamCount",
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = if (scamCount == 1) "time" else "times",
+                fontSize = 18.sp,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
 
         Spacer(modifier = Modifier.height(40.dp))
 
@@ -219,7 +236,7 @@ fun OnboardingScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         if (hasRole && hasRuntimePerms && hasOverlay && hasAccessibility) {
-             Text(
+            Text(
                 text = "System Active & Protecting You",
                 color = Color(0xFF2E7D32),
                 fontWeight = FontWeight.Bold,
@@ -262,7 +279,7 @@ fun checkRole(context: Context): Boolean {
         val roleManager = context.getSystemService(Context.ROLE_SERVICE) as RoleManager
         return roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
     }
-    return true // Assume true or handle differently for older versions (unlikely for this app's minSdk)
+    return true
 }
 
 fun checkRuntimePerms(context: Context): Boolean {
@@ -289,13 +306,3 @@ fun checkAccessibility(context: Context): Boolean {
     }
     return false
 }
-
-// Helper for Lifecycle in Compose
-@Composable
-fun LocalLifecycleOwner_current(): androidx.lifecycle.LifecycleOwner {
-    return androidx.lifecycle.compose.LocalLifecycleOwner.current
-}
-// Just mapping usage to the standard LocalLifecycleOwner if imports are tricky,
-// but usually LocalLifecycleOwner.current works direct with import.
-// Adding the import to the top block.
-
