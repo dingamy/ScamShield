@@ -122,17 +122,6 @@ object ScamDetector {
         return false
     }
 
-    // Basic cleaning to improve detection accuracy
-    private fun cleanText(text: String): String {
-        // Remove common OCR/Scraping noise patterns
-        // 1. Timestamps (e.g. 12:00)
-        // 2. Digits/Symbols that might break keyword boundaries
-        return text.replace(Regex("\\d{1,2}:\\d{2}"), " ")
-                   .replace(Regex("[^a-zA-Z0-9 ]"), " ")
-                   .replace(Regex("\\s+"), " ")
-                   .trim()
-    }
-
     // Basic tokenizer compatible with DistilBERT shapes
     // Returns Pair(InputIds as LongArray in 1xSeqLen, AttentionMask as LongArray in 1xSeqLen)
     private fun tokenize(text: String, seqLen: Int): Pair<Array<LongArray>, Array<LongArray>> {
