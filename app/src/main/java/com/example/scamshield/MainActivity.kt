@@ -21,9 +21,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-    private val contactsPermLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            Log.d("ScamShield", "READ_CONTACTS granted? $granted")
+    private val permissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val contactsGranted = permissions[android.Manifest.permission.READ_CONTACTS] ?: false
+            val phoneStateGranted = permissions[android.Manifest.permission.READ_PHONE_STATE] ?: false
+            Log.d("ScamShield", "Permissions granted: Contacts=$contactsGranted, PhoneState=$phoneStateGranted")
         }
 
     private val overlayPermLauncher =
@@ -47,8 +49,13 @@ class MainActivity : AppCompatActivity() {
         val statusText = findViewById<TextView>(R.id.statusText)
         statusText.text = getString(R.string.system_active)
 
-        // Trigger the system dialog to become the Call Screener
-        contactsPermLauncher.launch(android.Manifest.permission.READ_CONTACTS)
+        // Trigger permissions first
+        permissionsLauncher.launch(
+            arrayOf(
+                android.Manifest.permission.READ_CONTACTS,
+                android.Manifest.permission.READ_PHONE_STATE
+            )
+        )
         requestCallScreeningRoleQPlus()
     }
 

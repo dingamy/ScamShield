@@ -30,6 +30,7 @@ class CallScreen : CallScreeningService() {
         respondToCall(callDetails, response)
     }
 
+
     private fun checkContact(phoneNumber: String): Boolean {
         if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             Log.d("ScamShield", "READ_CONTACTS not granted")
