@@ -2,4 +2,8 @@
     <string name="app_name">ScamShield</string>
     <string name="system_active">System Active &amp; Protecting You</string>
     <string name="warning_spoof">Warning: Potential spoofed call from\n%1$s</string>
+    <string name="accessibility_service_description">Reads captions to detect scam keywords during calls.</string>
+    <string name="enable_scam_shield">Enable Scam Shield</string>
+    <string name="scam_shield_live_caption_hint">Ensure Live Caption is ON for protection</string>
+    <string name="scam_shield_monitoring">Scam Shield Active</string>
 </resources>
