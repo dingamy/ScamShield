@@ -8,7 +8,8 @@ import android.os.Build
 import android.provider.Settings
 import android.telecom.TelecomManager
 import android.util.Log
-
+import android.app.NotificationManager
+import android.content.Context
 class CallScreen : CallScreeningService() {
 
     override fun onScreenCall(callDetails: Call.Details) {
@@ -17,6 +18,17 @@ class CallScreen : CallScreeningService() {
         val phoneNumber = callDetails.handle?.schemeSpecificPart ?: "unknown"
         val isContact = checkContact(phoneNumber)
 
+        val presentation = callDetails.handlePresentation
+
+        // commented out for testing
+//        if (isContact) {
+//            when (presentation) {
+//                TelecomManager.PRESENTATION_UNKNOWN, TelecomManager.PRESENTATION_UNAVAILABLE, TelecomManager.PRESENTATION_RESTRICTED -> {
+//                    triggerRedAlert(phoneNumber)
+//                }
+//            }
+//
+//        }
         if (isContact && isLikelySpoofed(phoneNumber)) {
             triggerRedAlert(phoneNumber)
         }
@@ -52,6 +64,7 @@ class CallScreen : CallScreeningService() {
     private fun isLikelySpoofed(number: String): Boolean {
         // For the demo, we assume any call from a saved contact is potentially spoofed
         // to trigger the warning UI.
+
         return true
     }
 
