@@ -49,10 +49,10 @@ class MainActivity : AppCompatActivity() {
 
         // Trigger the system dialog to become the Call Screener
         contactsPermLauncher.launch(android.Manifest.permission.READ_CONTACTS)
-        requestCallScreeningRole_QPlus()
+        requestCallScreeningRoleQPlus()
     }
 
-    private fun requestCallScreeningRole_QPlus() {
+    private fun requestCallScreeningRoleQPlus() {
         val roleManager = getSystemService(ROLE_SERVICE) as RoleManager
 
         if (roleManager.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING) &&
