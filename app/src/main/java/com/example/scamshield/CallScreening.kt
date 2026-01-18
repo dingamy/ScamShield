@@ -8,7 +8,7 @@ import android.telecom.Call
 import android.telecom.CallScreeningService
 import android.util.Log
 
-class CallScreen : CallScreeningService() {
+class CallScreening : CallScreeningService() {
 
     override fun onScreenCall(callDetails: Call.Details) {
         Log.d(
