@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 
 
@@ -154,7 +155,7 @@ private fun MonitoringScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1B5E20)),
+            .background(Color(0xFF0D47A1)), // Dark blue background
         contentAlignment = Alignment.Center
     ) {
         Card(
@@ -175,12 +176,17 @@ private fun MonitoringScreen(
                     modifier = Modifier
                         .size(100.dp)
                         .background(
-                            color = Color(0xFF4CAF50).copy(alpha = 0.2f),
+                            color = Color(0xFFE3F2FD), // Light blue background
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "🛡️", fontSize = 64.sp)
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_scam_shield_logo),
+                        contentDescription = "ScamShield Logo",
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Unspecified
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -189,7 +195,7 @@ private fun MonitoringScreen(
                     text = "ScamShield Active",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2E7D32),
+                    color = Color(0xFF1565C0), // Blue text
                     textAlign = TextAlign.Center
                 )
 
@@ -286,13 +292,13 @@ private fun MonitoringScreen(
                         text = "✓ ",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4CAF50)
+                        color = Color(0xFF1565C0) // Blue checkmark
                     )
                     Text(
                         text = "Trust what rings",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF4CAF50)
+                        color = Color(0xFF1565C0) // Blue text
                     )
                 }
             }
