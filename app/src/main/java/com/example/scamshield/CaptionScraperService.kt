@@ -215,16 +215,16 @@ class CaptionScraperService : AccessibilityService(), SpellCheckerSession.SpellC
     }
 
     private fun checkForScam(text: String) {
+        if (scamNotificationShown) return
+
         Log.d("ScamShield", "Checking text: $text")
         if (text.length < 50) return // Too short to be meaningful
 
         if (ScamDetector.analyze(text)) {
-             if (!scamNotificationShown) {
-                 Log.w("ScamShield", "SCAM DETECTED in text: $text")
-                 scamNotificationShown = true
-                 incrementScamCounter()
-                 showPersistentScamNotification(text)
-             }
+             Log.w("ScamShield", "SCAM DETECTED in text: $text")
+             scamNotificationShown = true
+             incrementScamCounter()
+             showPersistentScamNotification(text)
 
              Handler(Looper.getMainLooper()).post {
                  Toast.makeText(this, "WARNING: SCAM LIKELY DETECTED: $text", Toast.LENGTH_LONG).show()
